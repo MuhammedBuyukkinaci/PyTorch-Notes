@@ -97,15 +97,28 @@ if torch.cuda.is_available():
 
 ```
 
-13) requires_grad is a parameter of tensor. It means the tensor is going to be optimized in training.
+## Autograd
 
-```
+13) requires_grad is a parameter of tensor. It means the tensor is going to be optimized in training. In order for PyTorch to disable requires_grad parameter after creation, use the 2nd code snippet.
+
+```run.py
 a = torch.rand(100,100,requires_grad =True)
 ```
 
-## Autograd
+```disable.py
+x = torch.randn(3,requires_grad=True)
+#way 1
+x.requires_grad_(False)
+# way 2
+x.detach()
+# way 3
+with torch.no_grad():
+    y = x + 2
+    # printing y and requires_grad is False
+    print(y)
+```
 
-14) We can calculate gradients using autograd.
+14) We can calculate gradients using autograd. In order to apply backward operation, the last elemnt should be scalar.
 
 ```autograd_usage.py
 import numpy as np
@@ -120,5 +133,96 @@ d.backward()#tensor(20.5779, grad_fn=<MeanBackward0>)
 print(a.grad)#tensor([6.0689, 5.9862, 6.0895])
 
 ```
+
+15) While looping in PyTorch, always set gradients of weights to 0.
+
+```
+weights = torch.ones(4,requires_grad=True)
+for epoch in range(3):
+    model_output = (weights*3).sum()
+    model_output.backward()
+    print(weights.grad)
+    weights.grad.zero_()
+
+```
+
+## Backpropagation
+
+16) 3 steps of backpropagation
+
+![](./images/001.png)
+
+![](./images/002.png)
+
+![](./images/003.png)
+
+```
+import torch
+
+x = torch.tensor(1.0)
+y = torch.tensor(2.0)
+
+w = torch.tensor(1.0,requires_grad=True)
+
+#forward pass and compute the loss
+y_hat = w * x
+loss = (y_hat - y)**2
+
+print(loss)
+#backward loss
+loss.backward()
+print(w.grad)
+#update weights
+#next forward and backwards
+
+```
+
+## Gradient Descent
+
+17) A numpy implementation of Linear Regression
+
+```numpy_example.py
+import numpy as np
+
+X= np.array([1,2,3,4], dtype=np.float32)
+Y= np.array([2,4,6,8], dtype=np.float32)
+
+w = 0.0
+
+# model prediction
+def forward(x):
+    return w*x
+
+# loss = MSE
+def loss(y, y_predicted):
+    return ((y_predicted-y)**2).mean()
+
+# gradient
+# MSE = 1/N * (w*x -y)**2
+# dJ/dw = 1/N * 2 * x * (w*x -y)
+
+def gradient(x,y,y_predicted):
+    return np.dot(2*x,y_predicted -y).mean()
+
+print(f"Prediction before training: f(5) = {forward(5): .3f} ")
+
+learning_rate = 0.01
+n_iters = 10
+
+for epoch in range(n_iters):
+    # prediction = forward pass
+    y_pred = forward(X)
+    # loss
+    l = loss(Y,y_pred)
+    # gradients
+    dw = gradient(X,Y,y_pred)
+    # update weights
+    w -= learning_rate * dw
+
+    print(f"epoch {epoch}, w = {w}, loss = {l}")
+
+print(f"Prediction after training f(5) = {forward(5)}")
+```
+
 
 
