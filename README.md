@@ -341,4 +341,61 @@ print(f"Prediction after training f(5) = {model(X_test).item(): .3f} ")
 
 ```
 
+# Linear Regression
+
+21) A linear regression implementation
+
+```linear_reg.py
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.nn as nn
+from sklearn import datasets
+
+# Step0: Prepare data
+X_numpy, y_numpy = datasets.make_regression(n_samples = 100, n_features = 1, noise = 20, random_state = 1)
+X = torch.from_numpy(X_numpy.astype(np.float32))
+y = torch.from_numpy(y_numpy.astype(np.float32))
+y = y.view(y.shape[0],1)
+
+n_samples, n_features = X.shape
+
+#1) Step1: Model
+input_size = n_features
+output_size = 1
+model = nn.Linear(input_size,output_size)
+
+# 2) Loss and optimizer
+learning_rate = 0.001
+criterion = nn.MSELoss()
+optimizer = torch.optim.SGD(model.parameters(), lr= learning_rate)
+
+# 3) Training Loop
+
+num_epochs = 100
+for epoch in range(num_epochs):
+    # forward pass and loss
+    y_predicted = model(X)
+    loss = criterion(y_predicted,y)
+
+    #backward pass(back propogation and calculates gradients for us)
+    loss.backward()
+
+    # update(updating model weights)
+    optimizer.step()
+
+    # set gradients to 0
+    optimizer.zero_grad()
+
+    print(f"epoch: { epoch + 1}, loss = {loss.item()}")
+
+# plot
+# detach will create a new tensor, where our gradient calculation attribute is set to False
+predicted = model(X).detach().numpy()
+plt.plot(X_numpy, y_numpy, 'ro')
+plt.plot(X_numpy, predicted,'b')
+plt.show()
+
+```
 
