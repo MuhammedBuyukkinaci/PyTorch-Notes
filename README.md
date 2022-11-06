@@ -578,3 +578,106 @@ composed = torchvision.transforms.Compose(
 dataset = WineDataset(transform=composed)
 
 ```
+
+## Softmax and CrossEntropy
+
+25) A basic usage of `torch.softmax`
+
+```
+x = torch.tensor([2,1,0.1])
+x_logit = torch.softmax(x, dim=0)
+print(x_logit)#tensor([0.6590, 0.2424, 0.0986])
+```
+
+26) Softmax function is usually combined with cross entropy loss.
+
+![](./images/004.png)
+
+27) nn.CrossEntropyLoss applies nn.LogSoftmax + nn.NLLLoss(negative log likelihood loss). **Don't put softmax in last layer**.
+**The target(y) has class labels and it isn't one-hot encoded**. Y_pred has raw scores(logits), therefore softmax should't be implemented explicitly.
+
+```loss.py
+import torch
+import torch.nn as nn
+
+loss = nn.CrossEntropyLoss()
+
+y = torch.tensor([0])
+#nsamples x nclasses = 1x3
+y_pred_good = torch.tensor([[2.0, 1.0, 0.1]])
+y_pred_bad = torch.tensor([[0.1, 3.0, 0.5]])
+
+l1 = loss(y_pred_good,y)
+l2 = loss(y_pred_bad,y)
+print(l1.item())#0.4170
+print(l2.item())#3.0284
+
+_, predictions1 = torch.max(y_pred_good,1)
+_, predictions2 = torch.max(y_pred_bad,1)
+print(predictions1)#tensor([0])
+print(predictions2)#tensor([1])
+
+y_multiple = torch.tensor([0,1,2,2,1])
+y_pred_multiple = torch.tensor([
+    [0.6,0.2,0.33],
+    [0.4,0.1,0.1],
+    [0.5,0.9,0.8],
+    [0.1,1.99,3.4],
+    [0.2,0.22,2.1]
+])
+l_multiple = loss(y_pred_multiple,y_multiple)
+print(l_multiple)#tensor(1.1072)
+```
+
+28) An example NeuralNet for Multiclass classification
+
+```neuralnet.py
+import torch
+import torch.nn as nn
+
+
+class NeuralNetMulticlass(nn.Module):
+    def __init__(self,input_size, hidden_size, num_classses) -> None:
+        super().__init__()
+        self.linear1 = nn.Linear(input_size,hidden_size)
+        self.relu = nn.ReLU()
+        self.linear2= nn.Linear(hidden_size,num_classses)
+    
+    def forward(self, x):
+        out = self.linear1(x)
+        out = self.relu(out)
+        out = self.linear2(out)
+        #no softmax at the end
+        return out
+
+model = NeuralNetMulticlass(input_size=28*28, hidden_size=5, num_classses=3)
+criterion = nn.CrossEntropyLoss()
+```
+
+29) Binary Classification example. EXPLICITLY define torch.sigmoid in forward method.
+
+```binary.py
+import torch
+import torch.nn as nn
+
+
+class NeuralNetBinary(nn.Module):
+    def __init__(self,input_size, hidden_size) -> None:
+        super().__init__()
+        self.linear1 = nn.Linear(input_size,hidden_size)
+        self.relu = nn.ReLU()
+        self.linear2= nn.Linear(hidden_size,1)
+    
+    def forward(self, x):
+        out = self.linear1(x)
+        out = self.relu(out)
+        out = self.linear2(out)
+        # sigmoid at the end
+        y_pred = torch.sigmoid(out)
+        return y_pred
+
+model = NeuralNetBinary(input_size=28*28, hidden_size=5)
+criterion = nn.BCELoss()
+```
+
+
