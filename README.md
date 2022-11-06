@@ -1,5 +1,6 @@
 # PyTorch-Notes
-Listing my PyTorch Notes
+
+Listing my PyTorch Notes. The source is [Deep Learning With PyTorch - Full Course](https://www.youtube.com/watch?v=c36lUUr864M)
 
 1) Tensors are core data abstractions of PyTorch. Our inputs, outputs and weights are all tensors.
 
@@ -399,3 +400,181 @@ plt.show()
 
 ```
 
+## Logistic Regression
+
+22) Logistic regression implementation
+
+```logistic.py
+import numpy as np
+import torch
+import torch.nn as nn
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# Step0: Prepare data
+bc = datasets.load_breast_cancer()
+
+X, y = bc.data, bc.target
+
+
+n_samples, n_features = X.shape
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size= 0.2, random_state= 51)
+
+# scale
+sc = StandardScaler()
+X_train = sc.fit_transform(X_train)
+X_test = sc.transform(X_test)
+
+X_train = torch.from_numpy(X_train.astype(np.float32))
+X_test = torch.from_numpy(X_test.astype(np.float32))
+y_train = torch.from_numpy(y_train.astype(np.float32))
+y_test = torch.from_numpy(y_test.astype(np.float32))
+
+y_train = y_train.view(y_train.shape[0], 1)
+y_test = y_test.view(y_test.shape[0], 1)
+
+#1) Step1: Model
+
+class LogisticRegression(nn.Module):
+    def __init__(self, n_input_features) -> None:
+        super().__init__()
+        self.linear = nn.Linear(n_input_features,1)
+    
+    def forward(self, x):
+        y_predicted = torch.sigmoid(self.linear(x))
+        return y_predicted
+
+model = LogisticRegression(n_input_features=n_features)
+
+# 2) Loss and optimizer
+learning_rate = 0.01
+criterion = nn.BCELoss()
+optimizer = torch.optim.SGD(model.parameters(), lr= learning_rate)
+
+# 3) Training Loop
+
+num_epochs = 100
+for epoch in range(num_epochs):
+    # forward pass and loss
+    y_predicted = model(X_train)
+    loss = criterion(y_predicted,y_train)
+
+    #backward pass(back propogation and calculates gradients for us)
+    loss.backward()
+
+    # update(updating model weights)
+    optimizer.step()
+
+    # set gradients to 0
+    optimizer.zero_grad()
+
+    print(f"epoch: { epoch + 1}, loss = {loss.item()}")
+
+with torch.no_grad():
+    y_predicted = model(X_test)
+    y_predicted_cls = y_predicted.round()
+    acc = y_predicted_cls.eq(y_test).sum() / float(y_test.shape[0])
+    print(f"accuracy = {acc:.4f}")
+
+```
+
+## Dataset and DataLoader
+
+23) If we use Dataset and DataLoader from pytorch, it will automatically deal with batch looping.
+
+```dataset_dataloader.py
+import math
+
+import numpy as np
+import torch
+import torchvision
+from torch.utils.data import DataLoader, Dataset
+
+
+class WineDataset(Dataset):
+
+    def __init__(self) -> None:
+        # data loading
+        xy = np.loadtxt('./data/wine/wine.csv',delimiter = ',', dtype = np.float32, skiprows = 1)
+        self.x = torch.from_numpy(xy[:,1:])
+        self.y = torch.from_numpy(xy[:,[0]])# n_samples, 1
+        self.n_samples = xy.shape[0]
+    
+    def __getitem__(self, index):
+        return self.x[index], self.y_index
+
+    def __len__(self):
+        return self.n_samples
+
+dataset = WineDataset()
+dataloader = DataLoader(dataset=dataset, batch_size= 4, shuffle=True, num_workers=2)
+# training loop
+num_epochs = 2
+total_samples = len(dataset)
+n_iterations =  (total_samples/ 4)
+print(total_samples, n_iterations)
+
+for epoch in range(num_epochs):
+    for i, (inputs,labels) in enumerate(dataloader):
+        print(f"epoch: {epoch+1}/{num_epochs}, step {i + 1}/ {n_iterations}, inputs {inputs.shape}")
+    
+# built-in Pytorch dataset, cifar, coco, MNIST
+# torchvision.datasets.MNIST()
+```
+
+## Dataset Transforms
+
+24) Transform options are listed [here](https://pytorch.org/vision/stable/transforms.html). `torchvision.transforms.ToTensor()` is used a lot.
+
+```transform_example.py
+import numpy as np
+import torch
+import torchvision
+from torch.utils.data import Dataset
+
+
+class WineDataset(Dataset):
+
+    def __init__(self, transform = None) -> None:
+        # data loading
+        xy = np.loadtxt('./data/wine/wine.csv',delimiter = ',', dtype = np.float32, skiprows = 1)
+        self.x = xy[:,1:]
+        self.y = xy[:,[0]]# n_samples, 1
+        self.n_samples = xy.shape[0]
+
+        self.transform = transform
+    
+    def __getitem__(self, index):
+        sample = self.x[index], self.y_index
+        if self.transform:
+            sample = self.transform(sample)
+        return sample
+
+    def __len__(self):
+        return self.n_samples
+
+class ToTensor:
+    def __call__(self, sample):
+        inputs, targets = sample
+        return torch.from_numpy(inputs), torch.from_numpy(targets)
+
+class MulTransform:
+    def __init__(self,factor) -> None:
+        self.factor = factor
+    
+    def __call__(self, sample):
+        inputs,target = sample
+        inputs *= self.factor
+        return inputs, target
+
+dataset = WineDataset(transform=None)
+dataset = WineDataset(transform=ToTensor())
+
+composed = torchvision.transforms.Compose(
+    [ToTensor(),MulTransform(2)]
+)
+dataset = WineDataset(transform=composed)
+
+```
