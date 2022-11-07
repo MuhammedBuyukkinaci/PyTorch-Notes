@@ -680,4 +680,39 @@ model = NeuralNetBinary(input_size=28*28, hidden_size=5)
 criterion = nn.BCELoss()
 ```
 
+## Activation Function
 
+30) Without activation function, Neural Networks are stacked linear regression models built on top of each other.
+
+![](./images/005.png)
+
+```activation_usage.py
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class ActivationFunction(nn.Module):
+    def __init__(self,input_size, hidden_size) -> None:
+        super().__init__()
+        self.linear1 = nn.Linear(input_size,hidden_size)
+        self.relu = nn.ReLU()
+        self.tanh = nn.Tanh()
+        self.leaky_relu = nn.LeakyReLU()
+        self.softmax = nn.Softmax()
+        self.linear2= nn.Linear(hidden_size,1)
+    
+    def forward(self, x):
+        out = self.linear1(x)
+        out = self.relu(out)
+        out = self.linear1(x)
+        out = self.tanh(out)
+        out = self.linear2(out)
+        # sigmoid at the end
+        y_pred = F.sigmoid(out)
+        return y_pred
+
+model = ActivationFunction(input_size=28*28, hidden_size=5)
+criterion = nn.BCELoss()
+```
