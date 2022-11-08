@@ -943,3 +943,49 @@ with torch.no_grad():
         acc = 100.0 * n_class_correct[i] / n_class_samples[i]
         print(f"Accuracy of {classes[i]}: {acc} %")
 ```
+
+## Transfer Learning
+
+34) Transfer Learning without freezing all layers
+
+```without_all_freeze.py
+#pretrained model, discarding last layer and setting up a new layer
+# train all layers without freezing
+model = models.resnet18(pretrained = True)
+in_features = model.fc.in_features
+model.fc = nn.Linear(in_features=in_features,out_features=2)
+model.to(device=device)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr = 1e-3)
+
+# scheduler
+# it will update learning rate
+step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+
+model = train_model(model, criterion, optimizer, step_lr_scheduler, num_epochs=25)
+```
+
+35) Transfer Learning with freezing most layers
+
+```
+#pretrained model, discarding last layer and setting up a new layer
+# train all layers without freezing
+model = models.resnet18(pretrained = True)
+for param in model.parameters():
+    param.requires_grad = False
+in_features = model.fc.in_features
+# be default, the below layer has requires_grad is True.
+model.fc = nn.Linear(in_features=in_features,out_features=2)
+model.to(device=device)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr = 1e-3)
+
+# scheduler
+# it will update learning rate
+step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+
+model = train_model(model, criterion, optimizer, step_lr_scheduler, num_epochs=25)
+```
+
