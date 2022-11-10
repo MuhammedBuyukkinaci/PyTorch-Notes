@@ -989,3 +989,149 @@ step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 model = train_model(model, criterion, optimizer, step_lr_scheduler, num_epochs=25)
 ```
 
+## Tensorbard
+
+36) To start a tensorboard client on terminal on [localhost:6006](http://localhost:6006/). Take a look at [Tensorboard on PyTorch](https://pytorch.org/docs/stable/tensorboard.html) link.
+
+```tersorboard.sh
+tensorboard --logdir=runs
+```
+
+37) Tensorboard usage for add_image, add_graph, add_scalar, add_pr_curve.
+
+```tesorboard_usage.py
+import sys
+
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+import torchvision.transforms as transforms
+#tensorboard things:
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter("runs/mnist")
+
+# device config
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu' )
+print(device)
+# hyperparameters
+input_size = 784# 28 * 28
+hidden_size = 100
+num_classes = 10
+num_epochs = 5
+batch_size = 100
+learning_rate = 1e-3
+
+# MNIST
+train_dataset = torchvision.datasets.MNIST(root='./data',train=True, transform=transforms.ToTensor(), download=True)
+
+test_dataset = torchvision.datasets.MNIST(root='./data',train=False, transform=transforms.ToTensor())
+
+train_loader = torch.utils.data.DataLoader(dataset = train_dataset, batch_size = batch_size, shuffle = True)
+test_loader = torch.utils.data.DataLoader(dataset = test_dataset, batch_size = batch_size, shuffle = False)
+
+examples = iter(train_loader)
+samples, labels = next(examples)
+print(samples.shape, labels.shape)#torch.Size([100, 1, 28, 28]) torch.Size([100])
+
+for i in range(6):
+    
+    plt.subplot(2,3,i+1)
+    plt.imshow(samples[i][0],cmap = 'gray')
+# plt.show()
+# tensorboard things
+img_grid = torchvision.utils.make_grid(samples)
+writer.add_image('mnist_images',img_grid)
+#sys.exit()
+
+class NeuralNet(nn.Module):
+    def __init__(self, input_size, hidden_size, num_classes) -> None:
+        super().__init__()
+        self.l1 = nn.Linear(input_size,hidden_size)
+        self.relu = nn.ReLU()
+        self.l2 = nn.Linear(hidden_size,num_classes)
+
+    def forward(self, x):
+        out = self.l1(x)
+        out = self.relu(out)
+        out = self.l2(out)
+        return out
+        
+model = NeuralNet(input_size=input_size,hidden_size=hidden_size,num_classes=num_classes).to(device)
+
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(),lr = learning_rate)
+
+# tensorbaoard things :model architecture
+writer.add_graph(model,samples.reshape(-1,28*28).to(device))
+running_loss = 0.0
+running_correct = 0.0
+
+# training loop
+n_total_steps = len(train_loader)
+for epoch in range(num_epochs):
+    for i, (images, labels) in enumerate(train_loader):
+        # reshaping 100,1,28,28 -> 100, 784
+        images = images.reshape(-1,28*28).to(device)
+        labels = labels.to(device)
+
+        # forward
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+        # set gradients to 0 first
+        optimizer.zero_grad()
+        # back propogate gradients
+        loss.backward()
+        # update weights via learning rate and gradients
+        optimizer.step()
+
+        # tensorbaoard things :eval metrics
+        running_loss += loss.item()
+        _, predicted = torch.max(outputs.data,1)
+        running_correct += (predicted ==labels).sum().item()
+
+        if (i + 1) % 100 == 0:
+            print(f"epoch / {epoch + 1}, step {i + 1} / {n_total_steps}, loss = {loss.item()}")
+            #tensorbaoard things:
+            writer.add_scalar('training loss',running_loss / 100, epoch*n_total_steps + 1)
+            writer.add_scalar('accuracy',running_correct / 100, epoch*n_total_steps + 1)
+            running_loss = 0.0
+            running_correct = 0.0
+# testing
+preds = []
+labels_list = []
+with torch.no_grad():
+    n_correct = 0
+    n_samples = 0
+    for images, labels in test_loader:
+        images = images.reshape(-1,28*28).to(device)
+        labels = labels.to(device)
+        outputs = model(images)
+
+        # value, index
+        _, predicted = torch.max(outputs, 1)
+        
+        n_samples += labels.shape[0]
+        n_correct += (predicted == labels).sum().item()
+
+        class_predictions = [F.softmax(output, dim = 0) for output in outputs]
+        preds.append(class_predictions)
+        labels_list.append(predicted)
+
+    preds = torch.cat([torch.stack(batch) for batch in preds])
+    labels_list = torch.cat(labels_list)
+
+    acc = 100.0 * n_correct / n_samples
+    print(f"accuracy = {acc}")
+
+    classes = range(10)
+    for i in classes:
+        labels_i = labels_list == i
+        preds_i = preds[:,i]
+        writer.add_pr_curve(str(i), labels_i, preds_i, global_step=0)
+        writer.close()
+
+```
+
