@@ -1135,3 +1135,136 @@ with torch.no_grad():
 
 ```
 
+## Saving and Loading
+
+38) Lazy method to save and load torch objects
+
+```lazy.py
+import torch
+import torch.nn as nn
+
+
+class Model(nn.Module):
+    def __init__(self,n_input_features) -> None:
+        super().__init__()
+        self.linear = nn.Linear(n_input_features,1)
+    def forward(self, x):
+        y_pred = torch.sigmoid(self.linear(x))
+        return y_pred
+
+model = Model(n_input_features=6)
+
+# lazy method
+## saving
+FILE = "model.pth"
+torch.save(model,FILE)
+
+## loading
+FILE = "model.pth"
+model_loaded = torch.load(FILE)
+model_loaded.eval()
+for param in model_loaded.parameters():
+    print(param)
+#Parameter containing:
+#tensor([[-0.0711,  0.2330, -0.0707, -0.3024, -0.1600,  0.3227]],
+#       requires_grad=True)
+#Parameter containing:
+#tensor([-0.0933], requires_grad=True)
+```
+
+39) Recommended way to save and load objects
+
+```recommended.py
+import torch
+import torch.nn as nn
+
+
+class Model(nn.Module):
+    def __init__(self,n_input_features) -> None:
+        super().__init__()
+        self.linear = nn.Linear(n_input_features,1)
+    def forward(self, x):
+        y_pred = torch.sigmoid(self.linear(x))
+        return y_pred
+
+model = Model(n_input_features=6)
+
+for param in model.parameters():
+    print(param)
+
+#Parameter containing:
+#tensor([[-0.2456,  0.1838, -0.3748, -0.3253, -0.3439,  0.0043]],
+#       requires_grad=True)
+#Parameter containing:
+#tensor([0.3711], requires_grad=True)
+
+## dumping
+FILE = "model.pth"
+torch.save(model.state_dict(),FILE)
+
+## loading
+FILE = "model.pth"
+loaded_model = Model(n_input_features=6)
+loaded_model.load_state_dict(torch.load(FILE))
+loaded_model.eval()
+
+for param in loaded_model.parameters():
+    print(param)
+
+## printing the same weights
+#Parameter containing:
+#tensor([[-0.2456,  0.1838, -0.3748, -0.3253, -0.3439,  0.0043]],
+#       requires_grad=True)
+#Parameter containing:
+#tensor([0.3711], requires_grad=True)
+```
+
+40) While dumping a model, use a file name ending with **.pth**.
+
+41) Checkpoint usage
+
+```checkpoint_usage.py
+import torch
+import torch.nn as nn
+
+
+class Model(nn.Module):
+    def __init__(self,n_input_features) -> None:
+        super().__init__()
+        self.linear = nn.Linear(n_input_features,1)
+    def forward(self, x):
+        y_pred = torch.sigmoid(self.linear(x))
+        return y_pred
+
+model = Model(n_input_features=6)
+
+learning_rate = 0.01
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+print(optimizer.state_dict())
+
+# saving a checkpoint
+checkpoint = {
+    "epoch": 90,
+    "model_state": model.state_dict(),
+    "optim_state": optimizer.state_dict()
+}
+
+torch.save(checkpoint, "checkpoint.pth")
+
+loaded_checkpoint = torch.load("checkpoint.pth")
+epoch = loaded_checkpoint['epoch']
+new_model = Model(n_input_features=6)
+new_optimizer = torch.optim.SGD(new_model.parameters(),lr = 0)
+
+new_model.load_state_dict(checkpoint['model_state'])
+new_optimizer.load_state_dict(checkpoint['optim_state'])
+
+print(new_optimizer.state_dict())#printing the same results before loading
+
+```
+
+42) If we trained our model on gpu and use it on cpu or vice versa, take a look at torch.load(map_location = device); `device` is either torch.device('cuda') or torch.device('cpu').
+
+
+
+
