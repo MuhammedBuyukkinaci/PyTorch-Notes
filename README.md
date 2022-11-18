@@ -503,7 +503,7 @@ class WineDataset(Dataset):
         self.n_samples = xy.shape[0]
     
     def __getitem__(self, index):
-        return self.x[index], self.y_index
+        return self.x[index], self.y[index]
 
     def __len__(self):
         return self.n_samples
@@ -547,7 +547,7 @@ class WineDataset(Dataset):
         self.transform = transform
     
     def __getitem__(self, index):
-        x_sample, y_sample = self.x[index], self.y_index
+        x_sample, y_sample = self.x[index], self.y[index]
         if self.transform:
             x_sample = self.transform(x_sample)
         return x_sample, y_sample
