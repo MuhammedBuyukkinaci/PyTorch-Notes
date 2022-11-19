@@ -1263,8 +1263,20 @@ print(new_optimizer.state_dict())#printing the same results before loading
 
 ```
 
+## Other notes
+
 42) If we trained our model on gpu and use it on cpu or vice versa, take a look at torch.load(map_location = device); `device` is either torch.device('cuda') or torch.device('cpu').
 
+43) If we want to evaluate our models via `with torch.no_grad():` context manager, we should first run model.eval() first because of the fact that some layers like dropout and batch normalization may behave different during the phases training and evaluation. In addition to this, don't forget to run `model.train()` before training.
 
+```
+model.eval()
+
+with torch.no_grad():
+    #perform evaluation
+
+```
+
+44) In order to transform data via `transforms.Compose(transforms=[ transforms.ToTensor(),transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))])`, our image input before transform operation should be an RGB pillow image(for the current case).
 
 
