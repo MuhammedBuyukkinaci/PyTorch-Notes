@@ -1279,4 +1279,15 @@ with torch.no_grad():
 
 44) In order to transform data via `transforms.Compose(transforms=[ transforms.ToTensor(),transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))])`, our image input before transform operation should be an RGB pillow image(for the current case).
 
+45) The below code can be used to read an image in \__getitem__ method.
 
+```run.py
+from torchvision.io import read_image
+
+class CustomDataset():
+    def __init__(self):
+        pass
+    def __getitem__(self):
+        image = read_image(img_path)
+
+```
