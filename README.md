@@ -1291,3 +1291,12 @@ class CustomDataset():
         image = read_image(img_path)
 
 ```
+
+46) To concatenate a list of pytorch tensors
+
+```
+import torch
+mylist = [torch.randn(2, 3),torch.randn(2, 3),torch.randn(2, 3),torch.randn(2, 3)]
+concatted = torch.cat(mylist, 0)
+print(concatted.shape)#(8,3)
+```
