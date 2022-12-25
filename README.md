@@ -1294,7 +1294,7 @@ class CustomDataset():
 
 46) To concatenate a list of pytorch tensors
 
-```
+```concat.py
 import torch
 mylist = [torch.randn(2, 3),torch.randn(2, 3),torch.randn(2, 3),torch.randn(2, 3)]
 concatted = torch.cat(mylist, 0)
